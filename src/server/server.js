@@ -78,6 +78,27 @@ if (env === 'development') {
     );
 }
 
+const ROOT = path.join(__dirname, '../..');
+// Get the paths to the compiled JS and CSS here from webpack manifest.
+const assets_filename =
+    ROOT +
+    (process.env.NODE_ENV === 'production'
+        ? '/tmp/webpack-stats-prod.json'
+        : '/tmp/webpack-stats-dev.json');
+const assets = require(assets_filename);
+
+function getSupportedLocales() {
+    const locales = [];
+    const files = fs.readdirSync(path.join(ROOT, 'src/app/locales'));
+    for (const filename of files) {
+        const match_res = filename.match(/(\w+)\.json?$/);
+        if (match_res) locales.push(match_res[1]);
+    }
+    return locales;
+}
+
+const supportedLocales = getSupportedLocales();
+
 app.use(isBot());
 
 // set number of processes equal to number of cores
@@ -257,8 +278,9 @@ if (env === 'production') {
 
 if (env !== 'test') {
     const appRender = require('./app_render');
+    // Get path to compiled
     app.use(function*() {
-        yield appRender(this);
+        yield appRender(this, assets, assets_filename, supportedLocales);
         // if (app_router.dbStatus.ok) recordWebEvent(this, 'page_load');
         const bot = this.state.isBot;
         if (bot) {

@@ -29,7 +29,7 @@ module.exports = function (stats) {
     // Find compiled images in modules
     // it will be used to map original filename to the compiled one
     // for server side rendering
-    const imagesRegex = /\.(jpe?g|png|gif|svg)$/;
+    const imagesRegex = /\.(jpe?g|png|gif)$/;
     const images = json.modules
         .filter(module => imagesRegex.test(module.name))
         .map(image => {
