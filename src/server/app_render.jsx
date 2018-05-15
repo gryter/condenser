@@ -14,7 +14,7 @@ const ROOT = path.join(__dirname, '../..');
 const DB_RECONNECT_TIMEOUT =
     process.env.NODE_ENV === 'development' ? 1000 * 60 * 60 : 1000 * 60 * 10;
 
-async function appRender(ctx, assets, assets_filename, supportedLocales) {
+async function appRender(ctx, supportedLocales, resolvedAssets = undefined) {
     const store = {};
     // This is the part of SSR where we make session-specific changes:
     try {
@@ -74,10 +74,13 @@ async function appRender(ctx, assets, assets_filename, supportedLocales) {
             userPreferences,
             offchain,
         });
-        // Don't cache assets name on dev
-        // TODO: Investigate removing this.
-        if (process.env.NODE_ENV === 'development') {
+        let assets;
+        if (!resolvedAssets) {
+            const assets_filename = ROOT + '/tmp/webpack-stats-dev.json';
+            assets = require(assets_filename);
             delete require.cache[require.resolve(assets_filename)];
+        } else {
+            assets = resolvedAssets;
         }
         const props = { body, assets, title, meta };
         ctx.status = statusCode;

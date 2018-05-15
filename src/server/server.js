@@ -79,13 +79,10 @@ if (env === 'development') {
 }
 
 const ROOT = path.join(__dirname, '../..');
-// Get the paths to the compiled JS and CSS here from webpack manifest.
-const assets_filename =
-    ROOT +
-    (process.env.NODE_ENV === 'production'
-        ? '/tmp/webpack-stats-prod.json'
-        : '/tmp/webpack-stats-dev.json');
-const assets = require(assets_filename);
+
+if (process.env.NODE_ENV === 'production') {
+    const resolvedAssets = require(ROOT + '/tmp/webpack-stats-prod.json');
+}
 
 function getSupportedLocales() {
     const locales = [];
@@ -280,7 +277,11 @@ if (env !== 'test') {
     const appRender = require('./app_render');
     // Get path to compiled
     app.use(function*() {
-        yield appRender(this, assets, assets_filename, supportedLocales);
+        if (process.env.NODE_ENV === 'production') {
+            yield appRender(this, supportedLocales, resolvedAssets);
+        } else {
+            yield appRender(this, supportedLocales);
+        }
         // if (app_router.dbStatus.ok) recordWebEvent(this, 'page_load');
         const bot = this.state.isBot;
         if (bot) {
