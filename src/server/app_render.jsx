@@ -6,15 +6,15 @@ import universalRender from '../shared/UniversalRender';
 import models from 'db/models';
 import secureRandom from 'secure-random';
 import ErrorPage from 'server/server-error';
-import fs from 'fs';
 import { determineViewMode } from '../app/utils/Links';
+import { getSupportedLocales } from './utils/misc';
 
 const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 const DB_RECONNECT_TIMEOUT =
     process.env.NODE_ENV === 'development' ? 1000 * 60 * 60 : 1000 * 60 * 10;
 
-async function appRender(ctx, supportedLocales, resolvedAssets = undefined) {
+async function appRender(ctx, locales = undefined, resolvedAssets = undefined) {
     const store = {};
     // This is the part of SSR where we make session-specific changes:
     try {
@@ -33,6 +33,7 @@ async function appRender(ctx, supportedLocales, resolvedAssets = undefined) {
         if (!userPreferences.locale) {
             let locale = ctx.getLocaleFromHeader();
             if (locale) locale = locale.substring(0, 2);
+            const supportedLocales = locales ? locales : getSupportedLocales();
             const localeIsSupported = supportedLocales.find(l => l === locale);
             if (!localeIsSupported) locale = 'en';
             userPreferences.locale = locale;
