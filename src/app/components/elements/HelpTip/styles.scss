@@ -1,0 +1,44 @@
+	.helptip-wrapper {
+		position: relative;
+		display: inline-block;
+		z-index: 98;
+		color: #555;
+		cursor: help;
+	};
+	.helptip {
+		position: absolute;
+		z-index: 99;
+		min-width: 200px;
+		max-width: 420px;
+		background: #000;
+		bottom: 100%;
+		left: 50%;
+		margin-bottom: 10px;
+		padding: 5px;
+		transform: translateX(-50%);
+	};
+	.helptip__content {
+		background: #000;
+		color: #fff;
+		display: inline;
+		font-size: .8em;
+		padding: .3em 1em;
+	};
+	.helptip__arrow {
+		position: absolute;
+		width: 0;
+		height: 0;
+		bottom: -5px;
+		left: 50%;
+		margin-left: -5px;
+		border-left: solid transparent 5px;
+		border-right: solid transparent 5px;
+		border-top: solid #000 5px;
+	};
+
+	.helptip__gap {
+		position: absolute;
+		width: 100%;
+		height: 20px;
+		bottom: -20px;
+	};
