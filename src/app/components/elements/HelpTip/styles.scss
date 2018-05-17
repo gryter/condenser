@@ -3,6 +3,9 @@
 		display: inline-block;
 		z-index: 98;
 		color: #555;
+		@include themify($themes) {
+			color: themed('menuBackgroundColor');
+		}
 		cursor: help;
 	};
 	.helptip {
@@ -10,7 +13,9 @@
 		z-index: 99;
 		min-width: 200px;
 		max-width: 420px;
-		background: #000;
+		@include themify($themes) {
+			background: themed('menuBackgroundColor');
+		}
 		bottom: 100%;
 		left: 50%;
 		margin-bottom: 10px;
@@ -18,8 +23,12 @@
 		transform: translateX(-50%);
 	};
 	.helptip__content {
-		background: #000;
-		color: #fff;
+		@include themify($themes) {
+			background: solid themed('menuBackgroundColor') 5px;
+		}
+		@include themify($themes) {
+			color: solid themed('textColorPrimary') 5px;
+		}
 		display: inline;
 		font-size: .8em;
 		padding: .3em 1em;
@@ -33,7 +42,11 @@
 		margin-left: -5px;
 		border-left: solid transparent 5px;
 		border-right: solid transparent 5px;
-		border-top: solid #000 5px;
+		border-top: solid;
+		border-top-width: 5px;
+		@include themify($themes) {
+			border-top-color: solid themed('menuBackgroundColor') 5px;
+		}
 	};
 
 	.helptip__gap {
