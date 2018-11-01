@@ -1,32 +1,31 @@
-import { takeLatest, takeEvery } from 'redux-saga';
-import { call, put, select, fork } from 'redux-saga/effects';
+import {
+    call,
+    put,
+    select,
+    fork,
+    takeLatest,
+    takeEvery,
+} from 'redux-saga/effects';
+import { api } from '@steemit/steem-js';
 import { loadFollows, fetchFollowCount } from 'app/redux/FollowSaga';
 import { getContent } from 'app/redux/SagaShared';
 import * as globalActions from './GlobalReducer';
 import * as appActions from './AppReducer';
 import constants from './constants';
 import { fromJS, Map, Set } from 'immutable';
-import { api } from '@steemit/steem-js';
+import { getStateAsync } from 'app/utils/steemApi';
 
 const REQUEST_DATA = 'fetchDataSaga/REQUEST_DATA';
 const GET_CONTENT = 'fetchDataSaga/GET_CONTENT';
 const FETCH_STATE = 'fetchDataSaga/FETCH_STATE';
 
 export const fetchDataWatches = [
-    watchLocationChange,
-    watchDataRequests,
-    watchFetchJsonRequests,
-    watchFetchState,
-    watchGetContent,
+    takeLatest(REQUEST_DATA, fetchData),
+    takeEvery(GET_CONTENT, getContentCaller),
+    takeLatest('@@router/LOCATION_CHANGE', fetchState),
+    takeLatest(FETCH_STATE, fetchState),
+    takeEvery('global/FETCH_JSON', fetchJson),
 ];
-
-export function* watchDataRequests() {
-    yield* takeLatest(REQUEST_DATA, fetchData);
-}
-
-export function* watchGetContent() {
-    yield* takeEvery(GET_CONTENT, getContentCaller);
-}
 
 export function* getContentCaller(action) {
     yield getContent(action.payload);
@@ -68,7 +67,7 @@ export function* fetchState(location_change_action) {
 
     yield put(appActions.fetchDataBegin());
     try {
-        const state = yield call([api, api.getStateAsync], url);
+        const state = yield call(getStateAsync, url);
         yield put(globalActions.receiveState(state));
         // If a user's transfer page is being loaded, fetch related account data.
         yield call(getTransferUsers, pathname);
@@ -120,16 +119,8 @@ function* getAccounts(usernames) {
     yield put(globalActions.receiveAccounts({ accounts }));
 }
 
-export function* watchLocationChange() {
-    yield* takeLatest('@@router/LOCATION_CHANGE', fetchState);
-}
-
-export function* watchFetchState() {
-    yield* takeLatest(FETCH_STATE, fetchState);
-}
-
 export function* fetchData(action) {
-    const { order, author, permlink, accountname } = action.payload;
+    const { order, author, permlink, accountname, postFilter } = action.payload;
     let { category } = action.payload;
     if (!category) category = '';
     category = category.toLowerCase();
@@ -302,17 +293,51 @@ export function* fetchData(action) {
     }
     yield put(appActions.fetchDataBegin());
     try {
-        const data = yield call([api, api[call_name]], ...args);
-        yield put(
-            globalActions.receiveData({
-                data,
-                order,
-                category,
-                author,
-                permlink,
-                accountname,
-            })
-        );
+        const firstPermlink = permlink;
+        var fetched = 0;
+        var endOfData = false;
+        var fetchLimitReached = false;
+        var fetchDone = false;
+        var batch = 0;
+        while (!fetchDone) {
+            var data = yield call([api, api[call_name]], ...args);
+
+            endOfData = data.length < constants.FETCH_DATA_BATCH_SIZE;
+
+            batch++;
+            fetchLimitReached = batch >= constants.MAX_BATCHES;
+
+            // next arg. Note 'by_replies' does not use same structure.
+            const lastValue = data.length > 0 ? data[data.length - 1] : null;
+            if (lastValue && order !== 'by_replies') {
+                args[0].start_author = lastValue.author;
+                args[0].start_permlink = lastValue.permlink;
+            }
+
+            // Still return all data but only count ones matching the filter.
+            // Rely on UI to actually hide the posts.
+            fetched += postFilter
+                ? data.filter(postFilter).length
+                : data.length;
+
+            fetchDone =
+                endOfData ||
+                fetchLimitReached ||
+                fetched >= constants.FETCH_DATA_BATCH_SIZE;
+
+            yield put(
+                globalActions.receiveData({
+                    data,
+                    order,
+                    category,
+                    author,
+                    firstPermlink,
+                    accountname,
+                    fetching: !fetchDone,
+                    endOfData,
+                })
+            );
+        }
     } catch (error) {
         console.error('~~ Saga fetchData error ~~>', call_name, args, error);
         yield put(appActions.steemApiError(error.message));
@@ -365,10 +390,6 @@ export function* fetchMeta({ payload: { id, link } }) {
     } catch (error) {
         yield put(globalActions.receiveMeta({ id, meta: { error } }));
     }
-}
-
-export function* watchFetchJsonRequests() {
-    yield* takeEvery('global/FETCH_JSON', fetchJson);
 }
 
 /**
